@@ -1,0 +1,7 @@
+pandas>=2.0
+numpy
+pyyaml
+openpyxl
+xlsxwriter
+sqlalchemy>=2.0
+pyodbc

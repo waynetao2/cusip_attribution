@@ -1,0 +1,56 @@
+# ---- Quarterly run settings: copy this file, change dates + curves, run. ----
+quarter_label: 26Q2
+prior_date:   "2026-03-31"
+current_date: "2026-06-30"
+
+# Database connection (SQLAlchemy URL). Leave blank to use --from-workbook.
+db_url: "mssql+pyodbc://@IGC_DSN?trusted_connection=yes"
+
+# Par curves (decimal). Tenors in years. Monthly grid is built by linear interpolation,
+# flat before the first node and beyond the last node (same as the "rates" tab).
+curves:
+  UST:
+    tenors: [0.25, 0.5, 1, 2, 3, 5, 7, 10, 20, 30]
+    prior:   [0.0370, 0.0372, 0.0368, 0.0379, 0.0381, 0.0392, 0.0411, 0.0430, 0.0488, 0.0488]
+    current: [0.0387, 0.0401, 0.0398, 0.0414, 0.0415, 0.0419, 0.0430, 0.0444, 0.0493, 0.0491]
+  JGB:
+    tenors: [0.25, 0.5, 1, 2, 3, 5, 7, 10, 20, 30, 40]
+    prior:   [0.01102, 0.01102, 0.01102, 0.01375, 0.01503, 0.01804, 0.02019, 0.02366, 0.03284, 0.03640, 0.03713]
+    current: [0.01165, 0.01165, 0.01165, 0.01382, 0.01531, 0.01937, 0.02231, 0.02690, 0.03625, 0.03873, 0.03792]
+curve_by_model: {JPI: JGB}          # everything else uses UST
+
+# FX (local currency per USD) for blocks whose par is in local face. Needed for the price-based actual.
+fx:
+  JPI: {prior: 158.725, current: 162.585}
+
+# Quota-share scaling applied to MV, par and book for specific portfolios.
+portfolio_scale: {TR_FT3: 0.2778238}
+
+# Known portfolio moves (prior -> current). Unlisted moves are auto-detected by riskid.
+portfolio_remap: {}                 # e.g. {TR_CFA: TR_CFM}
+
+# Data-quality thresholds
+dq:
+  max_abs_oas_bp: 1000              # OAS above this is treated as bad analytics
+  max_abs_doas_bp: 300              # quarter change above this is flagged
+  miss_flag_abs: 250000             # $ residual flagged for review
+  miss_flag_pct_mv: 0.02            # or residual > 2% of prior MV
+
+# Aladdin convexity is quoted /100 (a 30Y UST shows ~3.3, true convexity ~330).
+# The delivered workbook used it unscaled. CONFIRM with the Aladdin analytics guide; 1 = legacy.
+convexity_scale: 100
+
+# Add a time / pull-to-par component: (par - MV) amortised linearly over WAL for one quarter.
+# On 26Q2 USD blocks this explained about half of the residual.
+pull_to_par: true
+
+# How the residual (actual - estimate) is handled:
+#   abs_weight  : Bryan's vBG approach - allocate by |rate| / (|rate|+|spread|)
+#   duration    : allocate by EFF_DUR*|dRate| vs SPREAD_DUR*|dOAS| (sensitivity-weighted)
+#   none        : leave residual as its own "unexplained" column
+true_up_method: abs_weight
+
+# "Actual" economic MV change:
+#   legacy      : dMV - dPar  (vBG column W; assumes par changes transact at par)
+#   price       : prior par x change in clean price  (removes paydown/purchase effects at actual price)
+actual_method: price
